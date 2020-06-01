@@ -1,4 +1,0 @@
-root: /content/drive/My Drive/DL # root
-model path: UNet.best.pth # path to the model relative to the root
-image size: 256, 256 # model image input size (height, width)
-test data: test # path to folder relative to the root with test data

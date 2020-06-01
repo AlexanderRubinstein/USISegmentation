@@ -1,5 +1,0 @@
-root: /content/drive/My Drive/DL # root
-image size: 128, 128 # model image input size (height, width)
-batch size: 4 # batch size
-epochs number: 30 # number of epochs
-log dir: tb # path to folder relative to the root where the results of experiments from the tensorboard will be recorded

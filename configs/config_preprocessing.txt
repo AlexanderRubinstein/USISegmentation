@@ -1,3 +1,0 @@
-root: /content/drive/My Drive/DL # root
-raw data: raw_data # path to folder relative to the root with raw data
-preprocessed data: data # path to folder relative to the root where preprocessed data will be

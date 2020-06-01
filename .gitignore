@@ -2,3 +2,12 @@
 raw_data/
 data/
 .dataset.csv
+
+# notebook with experiments
+Experiments.ipynb
+
+# pycache
+__pycache__/
+
+# configs
+configs/*.txt
