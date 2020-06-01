@@ -26,7 +26,9 @@ random.seed(seed)
 np.random.seed(seed)
 torch.manual_seed(seed)
 
-torch.backends.cudnn.deterministic = True
+if torch.cuda.is_available():
+    torch.backends.cudnn.deterministic = True
+    torch.cuda.manual_seed(seed)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 DATASET_TABLE_PATH = './dataset.csv'
