@@ -16,7 +16,7 @@ class SoftDiceLoss(torch.nn.Module):
         super(SoftDiceLoss, self).__init__()
         
     def forward(self, predicted_masks, masks):
-        return 1 - DiceCoefficient(predicted_masks, masks)/predicted_masks.shape[0]
+        return 1 - DiceCoefficient(predicted_masks, masks)
 
 class CombinedLoss(torch.nn.Module):
     def __init__(self, losses, coefficients=[0.4, 0.6]):
