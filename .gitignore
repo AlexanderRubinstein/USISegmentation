@@ -1,13 +1,20 @@
 # data folder
 raw_data/
 data/
-.dataset.csv
+dataset.csv
 
 # notebook with experiments
 Experiments.ipynb
 
 # pycache
-__pycache__/
+**/__pycache__/
+
 
 # configs
 configs/*.txt
+
+# tensorboard log dir
+/tb
+
+# model weights
+*.pth
