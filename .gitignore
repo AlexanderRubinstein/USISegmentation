@@ -1,2 +1,4 @@
 # data folder
-raw_data/*
+raw_data/
+data/
+.dataset.csv
