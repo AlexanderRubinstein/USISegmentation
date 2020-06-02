@@ -16,7 +16,7 @@ def main(argv):
     params = args_parsing(cmd_args_parsing(argv))
     root, raw_data_path, preprocessed_data_path = params['root'], params['raw_data_path'], params['preprocessed_data_path']
     
-    patients_paths = [os.path.join(raw_data_path, patient_name) for patient_name in os.listdir(raw_data_path)]
+    patients_paths = [os.path.join(raw_data_path, patient_name) for patient_name in sorted(os.listdir(raw_data_path))]
     
     print('preprocessing data for {} patients'.format(len(patients_paths)))
     print()

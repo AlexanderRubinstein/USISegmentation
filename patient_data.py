@@ -22,12 +22,12 @@ class Patient(object):
         return os.path.basename(self.patient_data_path)
     
     def get_images_paths(self):
-        return [os.path.join(self.images_path, image_name) for image_name in os.listdir(self.images_path)]
+        return [os.path.join(self.images_path, image_name) for image_name in sorted(os.listdir(self.images_path))]
     
     def get_masks_paths(self):
         if self.masks_path is None:
             return None
-        return [os.path.join(self.masks_path, mask_name) for mask_name in os.listdir(self.masks_path)]
+        return [os.path.join(self.masks_path, mask_name) for mask_name in sorted(os.listdir(self.masks_path))]
     
     def read_tiff_file(self, path):
         image = Image.open(path)
