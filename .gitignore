@@ -5,6 +5,7 @@ dataset.csv
 
 # notebook with experiments
 Experiments.ipynb
+.ipynb_checkpoints/
 
 # pycache
 **/__pycache__/
