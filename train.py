@@ -211,9 +211,9 @@ def main(argv):
     os.makedirs(os.path.dirname(new_checkpoint_path), exist_ok=True)
     
     if checkpoint_path is not None:
+        checkpoint_path = os.path.join(root, 'checkpoints', checkpoint_path)
         print(f"\nLoading checkpoint from {checkpoint_path}.\n")
         checkpoint = torch.load(checkpoint_path)
-        # experiment_name = checkpoint['experiment_name']
     else:
         checkpoint = None
     best_model_path = os.path.join(root, best_model_path)
