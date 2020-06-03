@@ -13,7 +13,7 @@ import torchvision
 
 from configs.parsing import cmd_args_parsing, args_parsing
 from transforms import Resize, HorizontalFlip, RandomRotation, RandomScale, BrightContrastJitter, ToTensor
-from dataset import SegmentationDataset, SequentialSampler, BatchSampler
+from dataset import SegmentationDataset, ConcatDataset, SequentialSampler, BatchSampler
 from models import UNet
 from metrics import DiceCoefficient
 from losses import CrossEntropyLoss, SoftDiceLoss, CombinedLoss
@@ -146,8 +146,10 @@ def main(argv):
                                                               BrightContrastJitter(brightness=(0.5, 2.0), contrast=(0.5, 2.0)),
                                                               ToTensor()])
     
-    train_dataset = SegmentationDataset(dataset=dataset[dataset['phase'] == 'train'],
-                                        transform=augmentation_transforms)
+    train_dataset = ConcatDataset([SegmentationDataset(dataset=dataset[dataset['phase'] == 'train'],
+                                                       transform=transforms),
+                                   SegmentationDataset(dataset=dataset[dataset['phase'] == 'train'],
+                                                       transform=augmentation_transforms)])
 
     train_sampler = SequentialSampler(train_dataset)
     train_batch_sampler = BatchSampler(train_sampler, batch_size)
