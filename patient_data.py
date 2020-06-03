@@ -32,14 +32,12 @@ class Patient(object):
     def read_tiff_file(self, path):
         image = Image.open(path)
         images = []
-        frame_number = 0
-        while True:
-            try:
-                image.seek(frame_number)
-                images.append(np.array(image.convert("RGB")))
-                frame_number += 1
-            except EOFError:
-                return np.array(images)
+        
+        for frame in range(image.n_frames):
+            image.seek(frame)
+            images.append(np.array(image.convert("RGB")))
+        
+        return np.array(images)
     
     def get_patient_data(self):
         patient_data = {}
@@ -98,9 +96,9 @@ class Patient(object):
         
         for image_id in tqdm(patient_data.keys()):
             images = [Image.fromarray(patient_data[image_id]['image'][i]) for i in range(patient_data[image_id]['image'].shape[0])]
-            Image.fromarray(patient_data[image_id]['image'][0]).save(os.path.join(path_to_save, '{}.tif'.format(image_id)),
-                                                                     save_all=True,
-                                                                     append_images=images[1:])
+            images[0].save(os.path.join(path_to_save, '{}.tif'.format(image_id)),
+                           save_all=True,
+                           append_images=images[1:])
             
         path_to_save = os.path.join(data_path, patient_name, 'Masks')
         if os.path.exists(path_to_save):
@@ -112,7 +110,7 @@ class Patient(object):
         
         data = []
         for image_id in patient_data.keys():
-            for frame in range(patient_data[image_id]['image'].shape[0] - 1):
+            for frame in range(patient_data[image_id]['image'].shape[0]):
                 image_path = os.path.join(patient_path, 'Images', '{}.tif'.format(image_id))
                 mask_path = os.path.join(patient_path, 'Masks', '{}.labels.tif'.format(image_id))
                 
