@@ -22,3 +22,6 @@ configs/*.txt
 
 # local .py files
 train_local.py
+
+# google supplementary files
+*.gsheet
