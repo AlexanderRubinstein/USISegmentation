@@ -4,7 +4,7 @@ data/
 dataset.csv
 
 # notebook with experiments
-Experiments.ipynb
+Experiments*.ipynb
 .ipynb_checkpoints/
 
 # pycache
@@ -19,3 +19,6 @@ configs/*.txt
 
 # model weights
 *.pth
+
+# local .py files
+train_local.py
