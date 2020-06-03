@@ -70,12 +70,13 @@ class Fourier2d(torch.nn.Module):
         self.w = torch.ones(image_size, requires_grad=True)
 
     def forward(self, x):
-        w = self.w.unsqueeze(0).unsqueeze(-1).repeat(x.shape[0], 1, 1, 2).to(x.device)
-        zero_complex_part = torch.zeros_like(x.permute(0, 2, 3, 1)).to(dtype=x.dtype)
-        ft_x = torch.fft(torch.cat([x.permute(0, 2, 3, 1), zero_complex_part], dim=-1), signal_ndim=2, normalized=True)
-        iff = torch.ifft(ft_x * w, signal_ndim=2, normalized=True)
+        w = self.w.unsqueeze(-1).repeat(x.shape[0], 1, 1, 1, 2).to(x.device)
+        zero_complex_part = torch.zeros_like(x)
+        
+        ft_x = torch.fft(torch.cat([x.unsqueeze(-1), zero_complex_part.unsqueeze(-1)], dim=-1), signal_ndim=3, normalized=True)
+        ift = torch.ifft(ft_x * w, signal_ndim=3, normalized=True)
 
-        return torch.sqrt(torch.pow(iff[:, :, :, 0], 2) + torch.pow(iff[:, :, :, 1], 2)).unsqueeze(1)
+        return torch.sqrt(torch.pow(ift[..., 0], 2) + torch.pow(ift[..., 1], 2))
 
 class NLFourier2d(torch.nn.Module):
     def __init__(self, image_size):
@@ -84,13 +85,14 @@ class NLFourier2d(torch.nn.Module):
         self.w = torch.zeros(image_size, requires_grad=True)
 
     def forward(self, x):
-        w = self.w.unsqueeze(0).repeat(x.shape[0], 1, 1).to(x.device)
-        zero_complex_part = torch.zeros_like(x.permute(0, 2, 3, 1)).to(dtype=x.dtype)
-        ft_x = torch.fft(torch.cat([x.permute(0, 2, 3, 1), zero_complex_part], dim=-1), signal_ndim=2, normalized=True)
-        w = torch.pow(torch.sqrt(torch.pow(ft_x[:, :, :, 0], 2) + torch.pow(ft_x[:, :, :, 1], 2)), w).unsqueeze(-1)
-        iff = torch.ifft(ft_x * w, signal_ndim=2, normalized=True)
+        w = self.w.repeat(x.shape[0], 1, 1, 1).to(x.device)
+        zero_complex_part = torch.zeros_like(x)
+        
+        ft_x = torch.fft(torch.cat([x.unsqueeze(-1), zero_complex_part.unsqueeze(-1)], dim=-1), signal_ndim=3, normalized=True)
+        w = torch.pow(torch.sqrt(torch.pow(ft_x[..., 0], 2) + torch.pow(ft_x[..., 1], 2)), w)
+        ift = torch.ifft(ft_x * w.unsqueeze(-1), signal_ndim=3, normalized=True)
 
-        return torch.sqrt(torch.pow(iff[:, :, :, 0], 2) + torch.pow(iff[:, :, :, 1], 2)).unsqueeze(1)
+        return torch.sqrt(torch.pow(ift[..., 0], 2) + torch.pow(ift[..., 1], 2))
 
 class UNet(torch.nn.Module):
     def __init__(self, n_channels, n_classes):
@@ -107,7 +109,7 @@ class UNet(torch.nn.Module):
         self.outconv = out_conv(32, n_classes)
 
     def forward(self, x):
-#         x = NLFourier2d(x.shape[2:])(x)
+#         x = Fourier2d(x.shape[1:])(x)
         down1 = self.down1(x)
         down2 = self.down2(down1)
         
