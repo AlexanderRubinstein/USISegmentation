@@ -19,3 +19,6 @@ configs/*.txt
 
 # model weights
 *.pth
+
+# some python stuff
+.idea/

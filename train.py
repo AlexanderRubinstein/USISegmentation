@@ -14,7 +14,7 @@ import torchvision
 from configs.parsing import cmd_args_parsing, args_parsing
 from transforms import Resize, HorizontalFlip, RandomRotation, RandomScale, BrightContrastJitter, ToTensor
 from dataset import SegmentationDataset, ConcatDataset, SequentialSampler, BatchSampler
-from models import UNet
+from models import UNet, Unet_with_attention
 from metrics import DiceCoefficient
 from losses import CrossEntropyLoss, SoftDiceLoss, CombinedLoss
 
@@ -166,7 +166,7 @@ def main(argv):
                                                  batch_sampler=val_batch_sampler,
                                                  num_workers=4)
     
-    model = UNet(1, 2).to(device)
+    model = Unet_with_attention(1, 2).to(device)
 
     writer, experiment_name, best_model_path = setup_experiment(model.__class__.__name__, log_dir)
     best_model_path = os.path.join(root, best_model_path)

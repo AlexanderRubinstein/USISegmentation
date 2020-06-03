@@ -107,3 +107,42 @@ class UNet(torch.nn.Module):
         up2 = self.up2(up1, down1)
         
         return self.outconv(up2)
+
+
+class attention(torch.nn.Module):
+    def __init__(self, shape):
+        super(attention, self).__init__()
+        self.W = torch.randn(shape)
+
+    def forward(self, x):
+
+        W = (self.W.repeat(x.shape[0], 1, 1, 1) * x).to(x.device)
+        return W * x
+
+
+class Unet_with_attention(torch.nn.Module):
+    def __init__(self, n_channels, n_classes):
+        super(UNet, self).__init__()
+
+        self.down1 = double_conv(n_channels, 32, 32)
+        self.down2 = down_step(32, 64)
+
+        self.bottom_bridge = down_step(64, 128)
+
+        self.up1 = up_step(128, 64)
+        self.up2 = up_step(64, 32)
+
+        self.outconv = out_conv(32, n_classes)
+
+    def forward(self, x):
+        #         x = Fourier2d(x.shape[1:])(x)
+        down1 = self.down1(x)
+        down2 = self.down2(down1)
+
+        bottom = self.bottom_bridge(down2)
+
+        up1 = self.up1(bottom, attention(x.shape[1:])(down2))
+        up2 = self.up2(up1, attention(x.shape[1:])(down1))
+
+        return self.outconv(up2)
+
