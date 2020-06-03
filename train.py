@@ -18,8 +18,6 @@ from models import UNet
 from metrics import DiceCoefficient
 from losses import CrossEntropyLoss, SoftDiceLoss, CombinedLoss
 
-from visualization import process_to_plot
-
 
 # for reproducibility
 seed = 0
@@ -68,7 +66,6 @@ def run_epoch(model, iterator, criterion, optimizer, metric, phase='train', epoc
     epoch_metric = 0.0
     
     with torch.set_grad_enabled(is_train):
-        batch_to_plot = np.random.choice(range(len(iterator)))
         for i, (images, masks) in enumerate(tqdm(iterator)):
             images, masks = images.to(device), masks.to(device)
             
@@ -82,22 +79,11 @@ def run_epoch(model, iterator, criterion, optimizer, metric, phase='train', epoc
                 optimizer.step()
             
             epoch_loss += loss.item()
-            epoch_metric += metric(predicted_masks, masks)
-
-            if i == batch_to_plot:
-                images_to_plot, masks_to_plot, predicted_masks_to_plot = \
-                    process_to_plot(images, masks, predicted_masks)
+            epoch_metric += metric(predicted_masks, masks)    
 
         if writer is not None:
             writer.add_scalar(f"loss_epoch/{phase}", epoch_loss / len(iterator), epoch)
             writer.add_scalar(f"metric_epoch/{phase}", epoch_metric / len(iterator), epoch)
-
-            # show images from last batch
-
-            # send to tensorboard them to tensorboard
-            writer.add_images(tag='images', img_tensor=images_to_plot, global_step=epoch+1)
-            writer.add_images(tag='true masks', img_tensor=masks_to_plot, global_step=epoch+1)
-            writer.add_images(tag='predicted masks', img_tensor=predicted_masks_to_plot, global_step=epoch+1)
 
         return epoch_loss / len(iterator), epoch_metric / len(iterator)
 
@@ -134,7 +120,7 @@ def train(model,
 
 def main(argv):
     params = args_parsing(cmd_args_parsing(argv))
-    root, image_size, batch_size, n_epochs, log_dir = params['root'], params['image_size'], params['batch_size'], params['n_epochs'], params['log_dir']
+    root, image_size, batch_size, lr, n_epochs, log_dir = params['root'], params['image_size'], params['batch_size'], params['lr'], params['n_epochs'], params['log_dir']
     
     train_val_split(os.path.join(root, DATASET_TABLE_PATH))
     dataset = pd.read_csv(os.path.join(root, DATASET_TABLE_PATH))
@@ -172,7 +158,7 @@ def main(argv):
     print()
 
     criterion = CombinedLoss([CrossEntropyLoss(), SoftDiceLoss()], [0.4, 0.6])
-    optimizer = torch.optim.Adam(model.parameters(), lr=1.0e-2)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=5)
     metric = DiceCoefficient
     
