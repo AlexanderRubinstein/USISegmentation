@@ -1,3 +1,4 @@
+import random
 import torchvision
 import torchvision.transforms.functional as TF
 
@@ -15,14 +16,15 @@ class Resize(object):
         return (image, mask)
 
 class HorizontalFlip(object):
-    def __init__(self):
-        self.flip = torchvision.transforms.RandomHorizontalFlip(p=1.0)
+    def __init__(self, p=0.5):
+        self.p = p
         
     def __call__(self, sample):
         image, mask = sample
         
-        image = self.flip(image)
-        mask = self.flip(mask)
+        if random.random() < self.p:
+            image = TF.hflip(image)
+            mask = TF.hflip(mask)
         
         return (image, mask)
 

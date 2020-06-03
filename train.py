@@ -13,7 +13,7 @@ import torchvision
 
 from configs.parsing import cmd_args_parsing, args_parsing
 from transforms import Resize, HorizontalFlip, RandomRotation, RandomScale, BrightContrastJitter, ToTensor
-from dataset import SegmentationDataset
+from dataset import SegmentationDataset, SequentialSampler, BatchSampler
 from models import UNet
 from metrics import DiceCoefficient
 from losses import CrossEntropyLoss, SoftDiceLoss, CombinedLoss
@@ -27,8 +27,8 @@ np.random.seed(seed)
 torch.manual_seed(seed)
 
 if torch.cuda.is_available():
-    torch.backends.cudnn.deterministic = True
     torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 DATASET_TABLE_PATH = './dataset.csv'
@@ -125,33 +125,29 @@ def main(argv):
     train_val_split(os.path.join(root, DATASET_TABLE_PATH))
     dataset = pd.read_csv(os.path.join(root, DATASET_TABLE_PATH))
     
-    augmentation_transforms = [HorizontalFlip(),
-                               torchvision.transforms.Compose([RandomRotation(10), RandomScale(scale=(1.1, 1.5))]),
-                               BrightContrastJitter(brightness=(0.5, 2.0), contrast=(0.5, 2.0))]
+    transforms = torchvision.transforms.Compose([Resize(size=image_size),
+                                                 HorizontalFlip(p=0.5),
+                                                 RandomRotation(degrees=10),
+                                                 RandomScale(scale=(1.0, 2.0)),
+                                                 BrightContrastJitter(brightness=(0.5, 2.0), contrast=(0.5, 2.0)),
+                                                 ToTensor()])
     
-    transforms = torchvision.transforms.Compose([Resize(image_size), ToTensor()])
     train_dataset = SegmentationDataset(dataset=dataset[dataset['phase'] == 'train'],
                                         transform=transforms)
-    for transform in augmentation_transforms:
-        transforms = torchvision.transforms.Compose([Resize(image_size),
-                                                     transform,
-                                                     ToTensor()])
-        augmented_dataset = SegmentationDataset(dataset=dataset[dataset['phase'] == 'train'],
-                                                transform=transforms)
-        train_dataset = torch.utils.data.ConcatDataset([train_dataset, augmented_dataset])
 
+    train_sampler = SequentialSampler(train_dataset)
+    train_batch_sampler = BatchSampler(train_sampler, batch_size)
     train_dataloader = torch.utils.data.DataLoader(dataset=train_dataset,
-                                                   batch_size=batch_size,
-                                                   shuffle=True)
-    #                                                num_workers=4)
+                                                   batch_sampler=train_batch_sampler)
 
+    transforms = torchvision.transforms.Compose([Resize(size=image_size), ToTensor()])
     val_dataset = SegmentationDataset(dataset=dataset[dataset['phase'] == 'val'],
                                       transform=transforms)
 
+    val_sampler = SequentialSampler(val_dataset)
+    val_batch_sampler = BatchSampler(val_sampler, batch_size)
     val_dataloader = torch.utils.data.DataLoader(dataset=val_dataset,
-                                                 batch_size=batch_size,
-                                                 shuffle=False)
-    #                                              num_workers=4)
+                                                 batch_sampler=val_batch_sampler)
     
     model = UNet(1, 2).to(device)
 
