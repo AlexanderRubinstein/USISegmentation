@@ -13,8 +13,8 @@ import torchvision
 
 from configs.parsing import cmd_args_parsing, args_parsing
 from transforms import Resize, HorizontalFlip, RandomRotation, RandomScale, BrightContrastJitter, ToTensor
-from dataset import SegmentationDataset, ConcatDataset, SequentialSampler, BatchSampler
-from models import UNet
+from dataset import SegmentationDataset, SequentialSampler, BatchSampler
+from models import UNetTC
 from metrics import DiceCoefficient
 from losses import CrossEntropyLoss, SoftDiceLoss, CombinedLoss
 
@@ -47,8 +47,9 @@ def train_val_split(csv_file_path, val_size=0.2):
                pd.DataFrame(phase, columns=['phase'])],
                axis=1).to_csv(csv_file_path, index=False)
 
-def setup_experiment(title, log_dir="./tb"):
-    experiment_name = "{}@{}".format(title, datetime.now().strftime("%d.%m.%Y-%Hh%Mm%Ss"))
+def setup_experiment(title, log_dir="./tb", experiment_name=None):
+    if experiment_name is None: 
+        experiment_name = "{}@{}".format(title, datetime.now().strftime("%d.%m.%Y-%Hh%Mm%Ss"))
     writer = SummaryWriter(log_dir=os.path.join(log_dir, experiment_name))
     best_model_path = f"{title}.best.pth"
     
@@ -108,10 +109,22 @@ def train(model,
           n_epochs,
           device,
           writer,
-          best_model_path):
+          best_model_path,
+          best_checkpoint_path,
+          checkpoint=None,
+          new_checkpoint_path=None):
 
     best_val_loss = float('+inf')
-    for epoch in range(n_epochs):
+    start_epoch = 0
+    if checkpoint is not None:
+        model.load_state_dict(checkpoint['model_state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        start_epoch = checkpoint['epoch']
+        best_val_loss = checkpoint['best_val_loss']
+        if scheduler is not None:
+            scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+
+    for epoch in range(start_epoch+1, start_epoch+n_epochs):
         train_loss, train_metric = run_epoch(model, train_dataloader,
                                              criterion, optimizer, metric,
                                              phase='train', epoch=epoch,
@@ -126,6 +139,24 @@ def train(model,
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             torch.save(model.state_dict(), best_model_path)
+            torch.save({
+            'epoch': epoch,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'scheduler_state_dict': scheduler.state_dict(),
+            'best_val_loss': best_val_loss
+            }, best_checkpoint_path)
+
+        print(f"Best val loss so far: {best_val_loss:.3f}")
+
+        if new_checkpoint_path is not None:
+          torch.save({
+          'epoch': epoch,
+          'model_state_dict': model.state_dict(),
+          'optimizer_state_dict': optimizer.state_dict(),
+          'scheduler_state_dict': scheduler.state_dict(),
+          'best_val_loss': best_val_loss
+          }, new_checkpoint_path)
 
         print(f'Epoch: {epoch+1:02}')
         print(f'\tTrain Loss: {train_loss:.3f} | Train Metric: {train_metric:.3f}')
@@ -133,42 +164,58 @@ def train(model,
 
 def main(argv):
     params = args_parsing(cmd_args_parsing(argv))
-    root, image_size, batch_size, lr, n_epochs, log_dir = params['root'], params['image_size'], params['batch_size'], params['lr'], params['n_epochs'], params['log_dir']
-    
+    root, experiment_name, image_size, batch_size, lr, n_epochs, log_dir, checkpoint_path = (                                                  
+        params['root'],
+        params['experiment_name'],
+        params['image_size'],
+        params['batch_size'],
+        params['lr'],
+        params['n_epochs'],
+        params['log_dir'],
+        params['checkpoint_path']
+    )
+
     train_val_split(os.path.join(root, DATASET_TABLE_PATH))
     dataset = pd.read_csv(os.path.join(root, DATASET_TABLE_PATH))
     
-    transforms = torchvision.transforms.Compose([Resize(size=image_size), ToTensor()])
-    augmentation_transforms = torchvision.transforms.Compose([Resize(size=image_size),
-                                                              HorizontalFlip(p=0.5),
-                                                              RandomRotation(degrees=10),
-                                                              RandomScale(scale=(1.0, 2.0)),
-                                                              BrightContrastJitter(brightness=(0.5, 2.0), contrast=(0.5, 2.0)),
-                                                              ToTensor()])
+    transforms = torchvision.transforms.Compose([Resize(size=image_size),
+                                                 HorizontalFlip(p=0.5),
+                                                 RandomRotation(degrees=10),
+                                                 RandomScale(scale=(1.0, 2.0)),
+                                                 BrightContrastJitter(brightness=(0.5, 2.0), contrast=(0.5, 2.0)),
+                                                 ToTensor()])
     
-    train_dataset = ConcatDataset([SegmentationDataset(dataset=dataset[dataset['phase'] == 'train'],
-                                                       transform=transforms),
-                                   SegmentationDataset(dataset=dataset[dataset['phase'] == 'train'],
-                                                       transform=augmentation_transforms)])
+    train_dataset = SegmentationDataset(dataset=dataset[dataset['phase'] == 'train'],
+                                        transform=transforms)
 
     train_sampler = SequentialSampler(train_dataset)
     train_batch_sampler = BatchSampler(train_sampler, batch_size)
     train_dataloader = torch.utils.data.DataLoader(dataset=train_dataset,
-                                                   batch_sampler=train_batch_sampler,
-                                                   num_workers=4)
+                                                   batch_sampler=train_batch_sampler)
 
+    transforms = torchvision.transforms.Compose([Resize(size=image_size), ToTensor()])
     val_dataset = SegmentationDataset(dataset=dataset[dataset['phase'] == 'val'],
                                       transform=transforms)
 
     val_sampler = SequentialSampler(val_dataset)
     val_batch_sampler = BatchSampler(val_sampler, batch_size)
     val_dataloader = torch.utils.data.DataLoader(dataset=val_dataset,
-                                                 batch_sampler=val_batch_sampler,
-                                                 num_workers=4)
+                                                 batch_sampler=val_batch_sampler)
     
-    model = UNet(1, 2).to(device)
+    model = UNetTC(1, 2).to(device)
 
-    writer, experiment_name, best_model_path = setup_experiment(model.__class__.__name__, log_dir)
+    writer, experiment_name, best_model_path = setup_experiment(model.__class__.__name__, log_dir, experiment_name)
+    
+    new_checkpoint_path = os.path.join(root, 'checkpoints', experiment_name  + '_latest.pth')
+    best_checkpoint_path = os.path.join(root, 'checkpoints', experiment_name  + '_best.pth')
+    os.makedirs(os.path.dirname(new_checkpoint_path), exist_ok=True)
+    
+    if checkpoint_path is not None:
+        print(f"\nLoading checkpoint from {checkpoint_path}.\n")
+        checkpoint = torch.load(checkpoint_path)
+        # experiment_name = checkpoint['experiment_name']
+    else:
+        checkpoint = None
     best_model_path = os.path.join(root, best_model_path)
     print(f"Experiment name: {experiment_name}")
     print(f"Model has {count_parameters(model):,} trainable parameters")
@@ -189,7 +236,10 @@ def main(argv):
           n_epochs,
           device,
           writer,
-          best_model_path)
+          best_model_path,
+          best_checkpoint_path,
+          checkpoint,
+          new_checkpoint_path)
 
 if __name__ == "__main__":
     main(sys.argv[1:])

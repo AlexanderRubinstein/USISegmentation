@@ -25,22 +25,31 @@ def args_parsing(config_file):
     
     if get_config_type(config_file) == 'train':
         f = open(config_file, 'r')
-        root, image_size, batch_size, lr, n_epochs, log_dir = [get_param(line) for line in f]
+        root, experiment_name, image_size, batch_size, lr, n_epochs, log_dir, checkpoint_path = [get_param(line) for line in f]
         
         image_size = tuple(map(int, image_size.split(", ")))
         batch_size = int(batch_size)
         lr = float(lr)
         n_epochs = int(n_epochs)
         log_dir = os.path.join(root, log_dir)
+        if experiment_name == 'None':
+            experiment_name = None
+        if checkpoint_path != 'None':
+            checkpoint_path = os.path.join(root, checkpoint_path)
+        else:
+            checkpoint_path = None
         
         f.close()
         
         params = {'root': root,
+                  'experiment_name': experiment_name,
                   'image_size': image_size,
                   'batch_size': batch_size,
                   'lr': lr,
                   'n_epochs': n_epochs,
-                  'log_dir': log_dir}
+                  'log_dir': log_dir,
+                  'checkpoint_path': checkpoint_path
+                  }
         
         return params
     
