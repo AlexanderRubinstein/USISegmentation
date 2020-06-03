@@ -18,6 +18,8 @@ from models import UNet
 from metrics import DiceCoefficient
 from losses import CrossEntropyLoss, SoftDiceLoss, CombinedLoss
 
+from visualization import process_to_plot
+
 
 # for reproducibility
 seed = 0
@@ -66,6 +68,7 @@ def run_epoch(model, iterator, criterion, optimizer, metric, phase='train', epoc
     epoch_metric = 0.0
     
     with torch.set_grad_enabled(is_train):
+        batch_to_plot = np.random.choice(range(len(iterator)))
         for i, (images, masks) in enumerate(tqdm(iterator)):
             images, masks = images.to(device), masks.to(device)
             
@@ -79,11 +82,21 @@ def run_epoch(model, iterator, criterion, optimizer, metric, phase='train', epoc
                 optimizer.step()
             
             epoch_loss += loss.item()
-            epoch_metric += metric(predicted_masks, masks)    
+            epoch_metric += metric(predicted_masks, masks)
+            
+            if i == batch_to_plot:
+                images_to_plot, masks_to_plot, predicted_masks_to_plot = process_to_plot(images, masks, predicted_masks)
 
         if writer is not None:
             writer.add_scalar(f"loss_epoch/{phase}", epoch_loss / len(iterator), epoch)
             writer.add_scalar(f"metric_epoch/{phase}", epoch_metric / len(iterator), epoch)
+            
+            # show images from last batch
+
+            # send to tensorboard them to tensorboard
+            writer.add_images(tag='images', img_tensor=images_to_plot, global_step=epoch+1)
+            writer.add_images(tag='true masks', img_tensor=masks_to_plot, global_step=epoch+1)
+            writer.add_images(tag='predicted masks', img_tensor=predicted_masks_to_plot, global_step=epoch+1)
 
         return epoch_loss / len(iterator), epoch_metric / len(iterator)
 
