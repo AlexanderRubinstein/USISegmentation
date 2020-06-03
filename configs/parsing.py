@@ -25,10 +25,11 @@ def args_parsing(config_file):
     
     if get_config_type(config_file) == 'train':
         f = open(config_file, 'r')
-        root, image_size, batch_size, n_epochs, log_dir = [get_param(line) for line in f]
+        root, image_size, batch_size, lr, n_epochs, log_dir = [get_param(line) for line in f]
         
         image_size = tuple(map(int, image_size.split(", ")))
         batch_size = int(batch_size)
+        lr = float(lr)
         n_epochs = int(n_epochs)
         log_dir = os.path.join(root, log_dir)
         
@@ -37,6 +38,7 @@ def args_parsing(config_file):
         params = {'root': root,
                   'image_size': image_size,
                   'batch_size': batch_size,
+                  'lr': lr,
                   'n_epochs': n_epochs,
                   'log_dir': log_dir}
         
