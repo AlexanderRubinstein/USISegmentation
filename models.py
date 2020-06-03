@@ -112,20 +112,23 @@ class UNet(torch.nn.Module):
 class attention(torch.nn.Module):
     def __init__(self, shape):
         super(attention, self).__init__()
-        self.W = torch.randn(shape)
+        self.W = torch.randn(1, *shape)
 
     def forward(self, x):
 
-        W = (self.W.repeat(x.shape[0], 1, 1, 1) * x).to(x.device)
+        W = (self.W.expand(x.shape[0], -1, -1, -1)).to(x.device)
         return W * x
 
 
 class Unet_with_attention(torch.nn.Module):
-    def __init__(self, n_channels, n_classes):
-        super(UNet, self).__init__()
+    def __init__(self, n_channels, n_classes, height, width):
+        super(Unet_with_attention, self).__init__()
 
         self.down1 = double_conv(n_channels, 32, 32)
+        self.att1 = attention((32, height, width))
+
         self.down2 = down_step(32, 64)
+        self.att2 = attention((64, height//2, width//2))
 
         self.bottom_bridge = down_step(64, 128)
 
@@ -141,8 +144,8 @@ class Unet_with_attention(torch.nn.Module):
 
         bottom = self.bottom_bridge(down2)
 
-        up1 = self.up1(bottom, attention(x.shape[1:])(down2))
-        up2 = self.up2(up1, attention(x.shape[1:])(down1))
+        up1 = self.up1(bottom, self.att2(down2))
+        up2 = self.up2(up1, self.att1(down1))
 
         return self.outconv(up2)
 
