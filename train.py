@@ -166,8 +166,8 @@ def main(argv):
                                                  batch_sampler=val_batch_sampler,
                                                  num_workers=4)
     
-    #model = Unet_with_attention(1, 2, image_size[0], image_size[1]).to(device)
-    model = UNet(1, 2).to(device)
+    model = Unet_with_attention(1, 2, image_size[0], image_size[1]).to(device)
+    #model = UNet(1, 2).to(device)
 
     writer, experiment_name, best_model_path = setup_experiment(model.__class__.__name__, log_dir)
     best_model_path = os.path.join(root, best_model_path)

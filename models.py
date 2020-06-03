@@ -112,11 +112,11 @@ class UNet(torch.nn.Module):
 class attention(torch.nn.Module):
     def __init__(self, shape):
         super(attention, self).__init__()
-        self.W = torch.randn(1, *shape)
+        self.W = torch.randn(1, *shape).to('cuda')
 
     def forward(self, x):
 
-        W = (self.W.expand(x.shape[0], -1, -1, -1)).to(x.device)
+        W = self.W.expand(x.shape[0], -1, -1, -1)
         return W * x
 
 
