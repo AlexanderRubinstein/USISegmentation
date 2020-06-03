@@ -13,6 +13,7 @@ Experiments*.ipynb
 
 # configs
 configs/*.txt
+!configs/sample_config_train.txt
 
 # tensorboard log dir
 /tb
