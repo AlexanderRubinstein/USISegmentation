@@ -4,7 +4,7 @@ data/
 dataset.csv
 
 # notebook with experiments
-Experiments.ipynb
+Experiments*.ipynb
 .ipynb_checkpoints/
 
 # pycache
@@ -13,6 +13,7 @@ Experiments.ipynb
 
 # configs
 configs/*.txt
+!configs/sample_config_train.txt
 
 # tensorboard log dir
 /tb
@@ -20,5 +21,15 @@ configs/*.txt
 # model weights
 *.pth
 
+<<<<<<< HEAD
 # some python stuff
+=======
+# local .py files
+train_local.py
+
+# google supplementary files
+*.gsheet
+
+# python stuff
+>>>>>>> origin/master
 .idea/

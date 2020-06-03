@@ -39,6 +39,18 @@ class up_step(torch.nn.Module):
         x = torch.cat([from_down_step, upsampled], dim=1)
         return self.conv(x)
 
+class up_step_triple_cat(torch.nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, padding=1):
+        super(up_step_triple_cat, self).__init__()
+
+        self.up = torch.nn.ConvTranspose2d(in_channels, out_channels, kernel_size=2, stride=2)
+        self.conv = double_conv(3 * out_channels, out_channels, out_channels, kernel_size, stride, padding)
+
+    def forward(self, from_up_step, from_down_step, from_prev):
+        upsampled = self.up(from_up_step)
+        x = torch.cat([from_down_step, from_prev, upsampled], dim=1)
+        return self.conv(x)
+
 class out_conv(torch.nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size=1, stride=1, padding=0):
         super(out_conv, self).__init__()
@@ -108,7 +120,6 @@ class UNet(torch.nn.Module):
         
         return self.outconv(up2)
 
-
 class attention(torch.nn.Module):
     def __init__(self, shape):
         super(attention, self).__init__()
@@ -149,3 +160,30 @@ class Unet_with_attention(torch.nn.Module):
 
         return self.outconv(up2)
 
+
+class UNetTC(torch.nn.Module):
+    def __init__(self, n_channels, n_classes):
+        super(UNetTC, self).__init__()
+        
+        self.down1 = double_conv(n_channels, 32, 32)
+        self.down2 = down_step(32, 64)
+
+        self.bottom_bridge = down_step(64, 128)
+
+        self.up1 = up_step_triple_cat(128, 64)
+        self.up2 = up_step_triple_cat(64, 32)
+        
+        self.outconv = out_conv(32, n_classes)
+
+    def forward(self, x):
+        down1 = self.down1(x)
+        down1_prev = torch.cat([down1[0][None, ...], down1[:-1]], dim=0)
+        down2 = self.down2(down1)
+        down2_prev = torch.cat([down2[0][None, ...], down2[:-1]], dim=0)
+        
+        bottom = self.bottom_bridge(down2)
+        
+        up1 = self.up1(bottom, down2, down2_prev)
+        up2 = self.up2(up1, down1, down1_prev)
+        
+        return self.outconv(up2)

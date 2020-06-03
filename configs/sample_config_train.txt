@@ -1,0 +1,8 @@
+root: /content/drive/My Drive/SK/DL/project/USISegmentation # root
+experiment_name: UNetTC_is256_bs4_lr001_epn300 # experiment name, if None default name will be created
+image size: 256, 256 # model image input size (height, width)
+batch size: 4 # batch size
+lr: 0.01 # learning rate
+epochs number: 20 # number of epochs
+log dir: tb # path to folder relative to the root where the results of experiments from the tensorboard will be recorded
+checkpoint_path: checkpoints/UNetTC_is256_bs4_lr001_epn20_latest.pth # checkpoint path if continue training, else None
