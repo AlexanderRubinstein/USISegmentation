@@ -26,3 +26,6 @@ train_local.py
 
 # google supplementary files
 *.gsheet
+
+# python stuff
+.idea/
