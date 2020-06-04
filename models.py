@@ -1,5 +1,5 @@
 import torch
-
+from crfseg import CRF
 
 class double_conv(torch.nn.Module):
     def __init__(self, in_channels, mid_channels, out_channels, kernel_size=3, stride=1, padding=1):
@@ -301,3 +301,42 @@ class UNetFourier(torch.nn.Module):
         up2 = self.up2(up1, down1)
         
         return self.outconv(up2)
+
+class UNet_crf(torch.nn.Module):
+
+    def __init__(self, n_channels, n_classes):
+        super(UNet_crf, self).__init__()
+
+        self.down1 = double_conv(n_channels, 32, 32)
+        self.down2 = down_step(32, 64)
+
+        self.bottom_bridge = down_step(64, 128)
+
+        self.up1 = up_step(128, 64)
+        self.up2 = up_step(64, 32)
+
+        self.outconv = out_conv(32, n_classes)
+
+        self.crf = CRF(n_spatial_dims=3)
+
+
+    def forward(self, x):
+
+        down1 = self.down1(x)
+        down2 = self.down2(down1)
+
+        bottom = self.bottom_bridge(down2)
+
+        up1 = self.up1(bottom, down2)
+        up2 = self.up2(up1, down1)
+
+        almost_out = self.outconv(up2) # [bs, 2, h, w]
+        almost_out = almost_out.reshape(*almost_out.shape, 1) # [bs, 2, h, w, 1]
+        almost_out = almost_out.transpose(0, 4) # [1, 2, h, w, bs]
+
+        out = self.crf(almost_out)
+
+        out = out.transpose(0, 4) # [bs, 2, h, w, 1]
+        out = out.squeeze(4) # [bs, 2, h, w]
+
+        return out
