@@ -227,7 +227,6 @@ class UNetTC4(torch.nn.Module):
         
         return self.outconv(up4)
 
-
 class Fourier2d(torch.nn.Module):
     def __init__(self, image_size):
         super(Fourier2d, self).__init__()

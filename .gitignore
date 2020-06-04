@@ -22,7 +22,7 @@ configs/*.txt
 *.pth
 
 # some python stuff
-=======
+
 # local .py files
 train_local*.py
 
