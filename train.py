@@ -15,7 +15,7 @@ from configs.parsing import cmd_args_parsing, args_parsing
 from transforms import Resize, HorizontalFlip, RandomRotation, RandomScale, BrightContrastJitter, ToTensor
 
 from dataset import SegmentationDataset, ConcatDataset, SequentialSampler, BatchSampler
-from models import UNetTC, UNet, Unet_with_attention
+from models import UNetTC, UNet, Unet_with_attention, UNetFourier
 
 from metrics import DiceCoefficient
 from losses import CrossEntropyLoss, SoftDiceLoss, CombinedLoss
@@ -179,36 +179,46 @@ def main(argv):
 
     train_val_split(os.path.join(root, DATASET_TABLE_PATH))
     dataset = pd.read_csv(os.path.join(root, DATASET_TABLE_PATH))
+
+    transforms = torchvision.transforms.Compose([Resize(size=image_size), ToTensor()])
+    augmentation_transforms = torchvision.transforms.Compose([Resize(size=image_size),
+                                                              HorizontalFlip(p=0.5),
+                                                              RandomRotation(degrees=10),
+                                                              RandomScale(scale=(1.0, 2.0)),
+                                                              BrightContrastJitter(brightness=(0.5, 2.0), contrast=(0.5, 2.0)),
+                                                              ToTensor()])
+
+    # To take original dataset just apply transforms, for augmented dataset apply augmentation_transforms. 
+    # Concat them if you want to use both.
+
+    # train_dataset = SegmentationDataset(dataset=dataset[dataset['phase'] == 'train'],
+    #                                     transform=augmentation_transforms)
     
-    transforms = torchvision.transforms.Compose([Resize(size=image_size),
-                                                 HorizontalFlip(p=0.5),
-                                                 RandomRotation(degrees=10),
-                                                 RandomScale(scale=(1.0, 2.0)),
-                                                 BrightContrastJitter(brightness=(0.5, 2.0), contrast=(0.5, 2.0)),
-                                                 ToTensor()])
-    
-    train_dataset = SegmentationDataset(dataset=dataset[dataset['phase'] == 'train'],
-                                        transform=transforms)
+    train_dataset = ConcatDataset([SegmentationDataset(dataset=dataset[dataset['phase'] == 'train'],
+                                                       transform=transforms),
+                                   SegmentationDataset(dataset=dataset[dataset['phase'] == 'train'],
+                                                       transform=augmentation_transforms)])
 
     train_sampler = SequentialSampler(train_dataset)
     train_batch_sampler = BatchSampler(train_sampler, batch_size)
     train_dataloader = torch.utils.data.DataLoader(dataset=train_dataset,
-                                                   batch_sampler=train_batch_sampler)
+                                                   batch_sampler=train_batch_sampler,
+                                                   num_workers=4)
 
-    transforms = torchvision.transforms.Compose([Resize(size=image_size), ToTensor()])
     val_dataset = SegmentationDataset(dataset=dataset[dataset['phase'] == 'val'],
                                       transform=transforms)
 
     val_sampler = SequentialSampler(val_dataset)
     val_batch_sampler = BatchSampler(val_sampler, batch_size)
     val_dataloader = torch.utils.data.DataLoader(dataset=val_dataset,
-                                                 batch_sampler=val_batch_sampler)
+                                                 batch_sampler=val_batch_sampler,
+                                                 num_workers=4)
     
+    # model = Unet_with_attention(1, 2, image_size[0], image_size[1]).to(device)
+    # model = UNet(1, 2).to(device)
+    # model = UNetTC(1, 2).to(device)
 
-    #model = Unet_with_attention(1, 2, image_size[0], image_size[1]).to(device)
-    #model = UNet(1, 2).to(device)
-
-    model = UNetTC(1, 2).to(device)
+    model = UNetFourier(1, 2, image_size, fourier_layer='linear').to(device)
 
     writer, experiment_name, best_model_path = setup_experiment(model.__class__.__name__, log_dir, experiment_name)
     

@@ -63,37 +63,6 @@ class out_conv(torch.nn.Module):
     def forward(self, x):
         return self.conv(x)
 
-class Fourier2d(torch.nn.Module):
-    def __init__(self, image_size):
-        super(Fourier2d, self).__init__()
-
-        self.w = torch.ones(image_size, requires_grad=True)
-
-    def forward(self, x):
-        w = self.w.unsqueeze(-1).repeat(x.shape[0], 1, 1, 1, 2).to(x.device)
-        zero_complex_part = torch.zeros_like(x)
-        
-        ft_x = torch.fft(torch.cat([x.unsqueeze(-1), zero_complex_part.unsqueeze(-1)], dim=-1), signal_ndim=3, normalized=True)
-        ift = torch.ifft(ft_x * w, signal_ndim=3, normalized=True)
-
-        return torch.sqrt(torch.pow(ift[..., 0], 2) + torch.pow(ift[..., 1], 2))
-
-class NLFourier2d(torch.nn.Module):
-    def __init__(self, image_size):
-        super(NLFourier2d, self).__init__()
-
-        self.w = torch.zeros(image_size, requires_grad=True)
-
-    def forward(self, x):
-        w = self.w.repeat(x.shape[0], 1, 1, 1).to(x.device)
-        zero_complex_part = torch.zeros_like(x)
-        
-        ft_x = torch.fft(torch.cat([x.unsqueeze(-1), zero_complex_part.unsqueeze(-1)], dim=-1), signal_ndim=3, normalized=True)
-        w = torch.pow(torch.sqrt(torch.pow(ft_x[..., 0], 2) + torch.pow(ft_x[..., 1], 2)), w)
-        ift = torch.ifft(ft_x * w.unsqueeze(-1), signal_ndim=3, normalized=True)
-
-        return torch.sqrt(torch.pow(ift[..., 0], 2) + torch.pow(ift[..., 1], 2))
-
 class UNet(torch.nn.Module):
     def __init__(self, n_channels, n_classes):
         super(UNet, self).__init__()
@@ -109,7 +78,6 @@ class UNet(torch.nn.Module):
         self.outconv = out_conv(32, n_classes)
 
     def forward(self, x):
-#         x = Fourier2d(x.shape[1:])(x)
         down1 = self.down1(x)
         down2 = self.down2(down1)
         
@@ -185,5 +153,83 @@ class UNetTC(torch.nn.Module):
         
         up1 = self.up1(bottom, down2, down2_prev)
         up2 = self.up2(up1, down1, down1_prev)
+        
+        return self.outconv(up2)
+
+
+class Fourier2d(torch.nn.Module):
+    def __init__(self, image_size):
+        super(Fourier2d, self).__init__()
+
+        self.w = torch.empty(image_size, requires_grad=True)
+        torch.nn.init.xavier_uniform_(self.w)
+        self.register_parameter(name='fourier_filter', param=torch.nn.Parameter(self.w))
+
+    def forward(self, x):
+        w = self.w.unsqueeze(-1).repeat(x.shape[0], 1, 1, 1, 2).to(x.device)
+        zero_complex_part = torch.zeros_like(x)
+        
+        ft_x = torch.fft(torch.cat([x.unsqueeze(-1), zero_complex_part.unsqueeze(-1)], dim=-1), signal_ndim=3, normalized=True)
+        ift = torch.ifft(ft_x * w, signal_ndim=3, normalized=True)
+        if torch.isnan(ift[0, 0, 0, 0, 0]):
+              print('BEFORE loss')
+
+        return torch.sqrt(torch.pow(ift[..., 0], 2) + torch.pow(ift[..., 1], 2))
+
+class NLFourier2d(torch.nn.Module):
+    def __init__(self, image_size):
+        super(NLFourier2d, self).__init__()
+
+        self.w = torch.empty(image_size, requires_grad=True)
+        torch.nn.init.xavier_uniform_(self.w)
+        self.register_parameter(name='fourier_filter', param=torch.nn.Parameter(self.w))
+
+    def forward(self, x):
+        w = self.w.repeat(x.shape[0], 1, 1, 1).to(x.device)
+        zero_complex_part = torch.zeros_like(x)
+        
+        ft_x = torch.fft(torch.cat([x.unsqueeze(-1), zero_complex_part.unsqueeze(-1)], dim=-1), signal_ndim=3, normalized=True)
+        w = torch.pow(torch.sqrt(torch.pow(ft_x[..., 0], 2) + torch.pow(ft_x[..., 1], 2)), w)
+        ift = torch.ifft(ft_x * w.unsqueeze(-1), signal_ndim=3, normalized=True)
+
+        return torch.sqrt(torch.pow(ift[..., 0], 2) + torch.pow(ift[..., 1], 2))
+
+class UNetFourier(torch.nn.Module):
+    def __init__(self, n_channels, n_classes, image_size, fourier_layer=None):
+        super(UNetFourier, self).__init__()
+        
+        self.down1 = double_conv(n_channels, 32, 32)
+        self.down2 = down_step(32, 64)
+
+        self.bottom_bridge = down_step(64, 128)
+
+        self.up1 = up_step(128, 64)
+        self.up2 = up_step(64, 32)
+        
+        self.outconv = out_conv(32, n_classes)
+        
+        self.fourier_layer = fourier_layer
+        H, W = image_size
+        # self.fl = Fourier2d((1, H, W))
+        if self.fourier_layer == 'linear':
+            self.fl1 = Fourier2d((32, H, W))
+            self.fl2 = Fourier2d((64, H//2, W//2))
+        elif self.fourier_layer == 'non-linear':
+            self.fl1 = NLFourier2d((32, H, W))
+            self.fl2 = NLFourier2d((64, H//2, W//2))
+
+    def forward(self, x):
+        # x = self.fl(x)
+        down1 = self.down1(x)
+        down2 = self.down2(down1)
+        
+        bottom = self.bottom_bridge(down2)
+        
+        if self.fourier_layer is not None:
+            down2 = self.fl2(down2)
+            down1 = self.fl1(down1)
+        
+        up1 = self.up1(bottom, down2)
+        up2 = self.up2(up1, down1)
         
         return self.outconv(up2)
