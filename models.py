@@ -1,5 +1,7 @@
 import torch
 
+from convolution_lstm import ConvLSTM
+
 
 class double_conv(torch.nn.Module):
     def __init__(self, in_channels, mid_channels, out_channels, kernel_size=3, stride=1, padding=1):
@@ -300,5 +302,34 @@ class UNetFourier(torch.nn.Module):
         
         up1 = self.up1(bottom, down2)
         up2 = self.up2(up1, down1)
+        
+        return self.outconv(up2)
+
+class UNetCLSTM(torch.nn.Module):
+    def __init__(self, n_channels, n_classes):
+        super(UNetCLSTM, self).__init__()
+        
+        self.down1 = double_conv(n_channels, 32, 32)
+        self.clstm1 = ConvLSTM(input_channels=32, hidden_channels=[128, 64, 64, 32, 32], kernel_size=3, step=5, effective_step=[4])
+        self.down2 = down_step(32, 64)
+        self.clstm2 = ConvLSTM(input_channels=64, hidden_channels=[128, 64, 64, 32, 32], kernel_size=3, step=5, effective_step=[4])
+        
+        self.bottom_bridge = down_step(64, 128)
+
+        self.up1 = up_step(128, 64)
+        self.up2 = up_step(64, 32)
+        
+        self.outconv = out_conv(32, n_classes)
+
+    def forward(self, x):
+        down1 = self.down1(x)
+        outputs1, (x1, new_c1) = self.clstm1(down1)
+        down2 = self.down2(down1)
+        outputs2, (x2, new_c2) = self.clstm2(down2)
+        
+        bottom = self.bottom_bridge(down2)
+        
+        up1 = self.up1(bottom, outputs2[0])
+        up2 = self.up2(up1, outputs1[1])
         
         return self.outconv(up2)
