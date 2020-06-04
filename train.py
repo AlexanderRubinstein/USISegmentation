@@ -24,8 +24,8 @@ from transforms import (BatchToPILImage,
 from dataset import SegmentationDataset, ConcatDataset, SequentialSampler, BatchSampler
 from models import UNetTC, UNet, Unet_with_attention, UNetFourier
 
-from metrics import DiceCoefficient
-from losses import CrossEntropyLoss, SoftDiceLoss, CombinedLoss
+from metrics import DiceMetric
+from losses import CrossEntropyLoss, GeneralizedDiceLoss, CombinedLoss
 
 from visualization import process_to_plot
 
@@ -75,7 +75,7 @@ def collate_transform(batch_transform=None):
         return collated
     return collate
 
-def run_epoch(model, iterator, criterion, optimizer, metric, phase='train', epoch=0, device='cpu', writer=None):
+def run_epoch(model, iterator, criterion, optimizer, metric, weighted_metric=None, phase='train', epoch=0, device='cpu', writer=None):
     is_train = (phase == 'train')
     if is_train:
         model.train()
@@ -84,6 +84,8 @@ def run_epoch(model, iterator, criterion, optimizer, metric, phase='train', epoc
     
     epoch_loss = 0.0
     epoch_metric = 0.0
+    if weighted_metric is not None:
+        epoch_weighted_metric = 0.0
     
     with torch.set_grad_enabled(is_train):
         batch_to_plot = np.random.choice(range(len(iterator)))
@@ -100,7 +102,9 @@ def run_epoch(model, iterator, criterion, optimizer, metric, phase='train', epoc
                 optimizer.step()
             
             epoch_loss += loss.item()
-            epoch_metric += metric(predicted_masks, masks)
+            epoch_metric += metric(torch.argmax(predicted_masks, dim=1), masks)
+            if weighted_metric is not None:
+                epoch_weighted_metric += weighted_metric(torch.argmax(predicted_masks, dim=1), masks)
             
             if i == batch_to_plot:
                 images_to_plot, masks_to_plot, predicted_masks_to_plot = process_to_plot(images, masks, predicted_masks)
@@ -108,6 +112,8 @@ def run_epoch(model, iterator, criterion, optimizer, metric, phase='train', epoc
         if writer is not None:
             writer.add_scalar(f"loss_epoch/{phase}", epoch_loss / len(iterator), epoch)
             writer.add_scalar(f"metric_epoch/{phase}", epoch_metric / len(iterator), epoch)
+            if weighted_metric is not None:
+                writer.add_scalar(f"weighted_metric_epoch/{phase}", epoch_weighted_metric / len(iterator), epoch)
             
             # show images from last batch
 
@@ -116,13 +122,15 @@ def run_epoch(model, iterator, criterion, optimizer, metric, phase='train', epoc
             writer.add_images(tag='true masks', img_tensor=masks_to_plot, global_step=epoch+1)
             writer.add_images(tag='predicted masks', img_tensor=predicted_masks_to_plot, global_step=epoch+1)
 
-        return epoch_loss / len(iterator), epoch_metric / len(iterator)
+        if weighted_metric is not None:
+            return epoch_loss / len(iterator), epoch_metric / len(iterator), epoch_weighted_metric / len(iterator)
+        return epoch_loss / len(iterator), epoch_metric / len(iterator), None
 
 def train(model,
           train_dataloader, val_dataloader,
           criterion,
           optimizer, scheduler,
-          metric,
+          metric, weighted_metric,
           n_epochs,
           device,
           writer,
@@ -142,14 +150,16 @@ def train(model,
             scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
 
     for epoch in range(start_epoch+1, start_epoch+n_epochs):
-        train_loss, train_metric = run_epoch(model, train_dataloader,
-                                             criterion, optimizer, metric,
-                                             phase='train', epoch=epoch,
-                                             device=device, writer=writer)
-        val_loss, val_metric = run_epoch(model, val_dataloader,
-                                         criterion, None, metric,
-                                         phase='val', epoch=epoch,
-                                         device=device, writer=writer)
+        train_loss, train_metric, train_weighted_metric = run_epoch(model, train_dataloader,
+                                                                    criterion, optimizer,
+                                                                    metric, weighted_metric,
+                                                                    phase='train', epoch=epoch,
+                                                                    device=device, writer=writer)
+        val_loss, val_metric, val_weighted_metric = run_epoch(model, val_dataloader,
+                                                              criterion, None,
+                                                              metric, weighted_metric,
+                                                              phase='val', epoch=epoch,
+                                                              device=device, writer=writer)
         if scheduler is not None:
             scheduler.step(val_loss)
 
@@ -176,8 +186,12 @@ def train(model,
           }, new_checkpoint_path)
 
         print(f'Epoch: {epoch+1:02}')
-        print(f'\tTrain Loss: {train_loss:.3f} | Train Metric: {train_metric:.3f}')
-        print(f'\t  Val Loss: {val_loss:.3f} |   Val Metric: {val_metric:.3f}')
+        if weighted_metric is not None:
+            print(f'\tTrain Loss: {train_loss:.3f} | Train Metric: {train_metric:.3f} | Train WeightedMetric: {train_weighted_metric:.3f}')
+            print(f'\t  Val Loss: {val_loss:.3f} |   Val Metric: {val_metric:.3f} |   Val WeightedMetric: {val_weighted_metric:.3f}')
+        else:
+            print(f'\tTrain Loss: {train_loss:.3f} | Train Metric: {train_metric:.3f}')
+            print(f'\t  Val Loss: {val_loss:.3f} |   Val Metric: {val_metric:.3f}')
 
 def main(argv):
     params = args_parsing(cmd_args_parsing(argv))
@@ -248,10 +262,11 @@ def main(argv):
     print(f"Model has {count_parameters(model):,} trainable parameters")
     print()
 
-    criterion = CombinedLoss([CrossEntropyLoss(), SoftDiceLoss()], [0.4, 0.6])
+    criterion = CombinedLoss([CrossEntropyLoss(), GeneralizedDiceLoss(weighted=True)], [0.4, 0.6])
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=5)
-    metric = DiceCoefficient
+    metric = DiceMetric()
+    weighted_metric = DiceMetric(weighted=True)
     
     print("To see the learning process, use command in the new terminal:\ntensorboard --logdir <path to log directory>")
     print()
@@ -259,7 +274,7 @@ def main(argv):
           train_dataloader, val_dataloader,
           criterion,
           optimizer, scheduler,
-          metric,
+          metric, weighted_metric,
           n_epochs,
           device,
           writer,

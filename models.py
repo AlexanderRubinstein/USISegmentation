@@ -59,7 +59,6 @@ class out_conv(torch.nn.Module):
         
         self.conv = torch.nn.Sequential(
             torch.nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding),
-            torch.nn.Softmax(dim=1)
         )
 
     def forward(self, x):
