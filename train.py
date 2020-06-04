@@ -12,7 +12,14 @@ import torch
 import torchvision
 
 from configs.parsing import cmd_args_parsing, args_parsing
-from transforms import Resize, HorizontalFlip, RandomRotation, RandomScale, BrightContrastJitter, ToTensor
+from transforms import Resize, ToTensor
+from transforms import (BatchToPILImage,
+                        BatchToTensor,
+                        BatchHorizontalFlip,
+                        BatchRandomRotation,
+                        BatchRandomScale,
+                        BatchBrightContrastJitter,
+                        BatchEncodeSegmentaionMap)
 
 from dataset import SegmentationDataset, ConcatDataset, SequentialSampler, BatchSampler
 from models import UNetTC, UNet, Unet_with_attention, UNetFourier
@@ -59,6 +66,14 @@ def setup_experiment(title, log_dir="./tb", experiment_name=None):
 
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+def collate_transform(batch_transform=None):
+    def collate(batch):
+        collated = torch.utils.data.dataloader.default_collate(batch)
+        if batch_transform is not None:
+            collated = batch_transform(collated)
+        return collated
+    return collate
 
 def run_epoch(model, iterator, criterion, optimizer, metric, phase='train', epoch=0, device='cpu', writer=None):
     is_train = (phase == 'train')
@@ -180,39 +195,35 @@ def main(argv):
     train_val_split(os.path.join(root, DATASET_TABLE_PATH))
     dataset = pd.read_csv(os.path.join(root, DATASET_TABLE_PATH))
 
-    transforms = torchvision.transforms.Compose([Resize(size=image_size), ToTensor()])
-    augmentation_transforms = torchvision.transforms.Compose([Resize(size=image_size),
-                                                              HorizontalFlip(p=0.5),
-                                                              RandomRotation(degrees=10),
-                                                              RandomScale(scale=(1.0, 2.0)),
-                                                              BrightContrastJitter(brightness=(0.5, 2.0), contrast=(0.5, 2.0)),
-                                                              ToTensor()])
-
-    # To take original dataset just apply transforms, for augmented dataset apply augmentation_transforms. 
-    # Concat them if you want to use both.
-
-    # train_dataset = SegmentationDataset(dataset=dataset[dataset['phase'] == 'train'],
-    #                                     transform=augmentation_transforms)
+    pre_transforms = torchvision.transforms.Compose([Resize(size=image_size), ToTensor()])
+    batch_transforms = torchvision.transforms.Compose([BatchEncodeSegmentaionMap()])
+    augmentation_batch_transforms = torchvision.transforms.Compose([BatchToPILImage(),
+                                                                    BatchHorizontalFlip(p=0.5),
+                                                                    BatchRandomRotation(degrees=10),
+                                                                    BatchRandomScale(scale=(1.0, 2.0)),
+                                                                    BatchBrightContrastJitter(brightness=(0.5, 2.0), contrast=(0.5, 2.0)),
+                                                                    BatchToTensor(),
+                                                                    BatchEncodeSegmentaionMap()])
     
-    train_dataset = ConcatDataset([SegmentationDataset(dataset=dataset[dataset['phase'] == 'train'],
-                                                       transform=transforms),
-                                   SegmentationDataset(dataset=dataset[dataset['phase'] == 'train'],
-                                                       transform=augmentation_transforms)])
-
+    train_dataset = SegmentationDataset(dataset=dataset[dataset['phase'] == 'train'],
+                                        transform=pre_transforms)
+    
     train_sampler = SequentialSampler(train_dataset)
     train_batch_sampler = BatchSampler(train_sampler, batch_size)
+    train_collate = collate_transform(augmentation_batch_transforms)
     train_dataloader = torch.utils.data.DataLoader(dataset=train_dataset,
                                                    batch_sampler=train_batch_sampler,
-                                                   num_workers=4)
+                                                   collate_fn=train_collate)
 
     val_dataset = SegmentationDataset(dataset=dataset[dataset['phase'] == 'val'],
-                                      transform=transforms)
+                                      transform=pre_transforms)
 
     val_sampler = SequentialSampler(val_dataset)
     val_batch_sampler = BatchSampler(val_sampler, batch_size)
+    val_collate = collate_transform(batch_transforms)
     val_dataloader = torch.utils.data.DataLoader(dataset=val_dataset,
                                                  batch_sampler=val_batch_sampler,
-                                                 num_workers=4)
+                                                 collate_fn=val_collate)
     
     # model = Unet_with_attention(1, 2, image_size[0], image_size[1]).to(device)
     # model = UNet(1, 2).to(device)
