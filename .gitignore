@@ -21,15 +21,13 @@ configs/*.txt
 # model weights
 *.pth
 
-<<<<<<< HEAD
 # some python stuff
 =======
 # local .py files
-train_local.py
+train_local*.py
 
 # google supplementary files
 *.gsheet
 
 # python stuff
->>>>>>> origin/master
 .idea/

@@ -156,6 +156,75 @@ class UNetTC(torch.nn.Module):
         
         return self.outconv(up2)
 
+class UNetTC3(torch.nn.Module):
+    def __init__(self, n_channels, n_classes):
+        super(UNetTC3, self).__init__()
+        
+        self.down1 = double_conv(n_channels, 32, 32)
+        self.down2 = down_step(32, 64)
+        self.down3 = down_step(64, 128)
+
+        self.bottom_bridge = down_step(128, 256)
+
+        self.up1 = up_step_triple_cat(256, 128)
+        self.up2 = up_step_triple_cat(128, 64)
+        self.up3 = up_step_triple_cat(64, 32)
+        
+        self.outconv = out_conv(32, n_classes)
+
+    def forward(self, x):
+        down1 = self.down1(x)
+        down1_prev = torch.cat([down1[0][None, ...], down1[:-1]], dim=0)
+        down2 = self.down2(down1)
+        down2_prev = torch.cat([down2[0][None, ...], down2[:-1]], dim=0)
+        down3 = self.down3(down2)
+        down3_prev = torch.cat([down3[0][None, ...], down3[:-1]], dim=0)
+        
+        bottom = self.bottom_bridge(down3)
+        
+        up1 = self.up1(bottom, down3, down3_prev)
+        up2 = self.up2(up1, down2, down2_prev)
+        up3 = self.up3(up2, down1, down1_prev)
+        
+        return self.outconv(up3)
+
+class UNetTC4(torch.nn.Module):
+    def __init__(self, n_channels, n_classes):
+        super(UNetTC4, self).__init__()
+        
+        self.down1 = double_conv(n_channels, 32, 32)
+        self.down2 = down_step(32, 64)
+        self.down3 = down_step(64, 128)
+        self.down4 = down_step(128, 256)
+
+        self.bottom_bridge = down_step(256, 512)
+
+        self.up1 = up_step_triple_cat(512, 256)
+        self.up2 = up_step_triple_cat(256, 128)
+        self.up3 = up_step_triple_cat(128, 64)
+        self.up4 = up_step_triple_cat(64, 32)
+        
+        self.outconv = out_conv(32, n_classes)
+
+    def forward(self, x):
+        down1 = self.down1(x)
+        down1_prev = torch.cat([down1[0][None, ...], down1[:-1]], dim=0)
+        down2 = self.down2(down1)
+        down2_prev = torch.cat([down2[0][None, ...], down2[:-1]], dim=0)
+        down3 = self.down3(down2)
+        down3_prev = torch.cat([down3[0][None, ...], down3[:-1]], dim=0)
+        down4 = self.down4(down3)
+        down4_prev = torch.cat([down4[0][None, ...], down4[:-1]], dim=0)
+        
+        bottom = self.bottom_bridge(down4)
+        
+        up1 = self.up1(bottom, down4, down4_prev)
+        up2 = self.up2(up1, down3, down3_prev)
+        up3 = self.up3(up2, down2, down2_prev)
+        up4 = self.up4(up3, down1, down1_prev)
+        
+        return self.outconv(up4)
+
 
 class Fourier2d(torch.nn.Module):
     def __init__(self, image_size):
