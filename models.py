@@ -227,6 +227,7 @@ class UNetTC4(torch.nn.Module):
         
         return self.outconv(up4)
 
+
 class Fourier2d(torch.nn.Module):
     def __init__(self, image_size):
         super(Fourier2d, self).__init__()
@@ -309,9 +310,9 @@ class UNetCLSTM(torch.nn.Module):
         super(UNetCLSTM, self).__init__()
         
         self.down1 = double_conv(n_channels, 32, 32)
-        self.clstm1 = ConvLSTM(input_channels=32, hidden_channels=[128, 64, 64, 32, 32], kernel_size=3, step=5, effective_step=[4])
+        self.clstm1 = ConvLSTM(input_channels=32, hidden_channels=[64, 32, 32, 16, 32], kernel_size=3, step=5, effective_step=[4]).cuda()
         self.down2 = down_step(32, 64)
-        self.clstm2 = ConvLSTM(input_channels=64, hidden_channels=[128, 64, 64, 32, 32], kernel_size=3, step=5, effective_step=[4])
+        self.clstm2 = ConvLSTM(input_channels=64, hidden_channels=[64, 32, 32, 32, 64], kernel_size=3, step=5, effective_step=[4]).cuda()
         
         self.bottom_bridge = down_step(64, 128)
 
@@ -322,13 +323,14 @@ class UNetCLSTM(torch.nn.Module):
 
     def forward(self, x):
         down1 = self.down1(x)
-        outputs1, (x1, new_c1) = self.clstm1(down1)
+        outputs1, _ = self.clstm1(down1)
+
         down2 = self.down2(down1)
-        outputs2, (x2, new_c2) = self.clstm2(down2)
+        outputs2, _ = self.clstm2(down2)
         
         bottom = self.bottom_bridge(down2)
         
         up1 = self.up1(bottom, outputs2[0])
-        up2 = self.up2(up1, outputs1[1])
+        up2 = self.up2(up1, outputs1[0])
         
         return self.outconv(up2)
