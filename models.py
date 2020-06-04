@@ -1,6 +1,8 @@
 import torch
 from crfseg import CRF
 
+from convolution_lstm import ConvLSTM
+
 class double_conv(torch.nn.Module):
     def __init__(self, in_channels, mid_channels, out_channels, kernel_size=3, stride=1, padding=1):
         super(double_conv, self).__init__()
@@ -225,6 +227,7 @@ class UNetTC4(torch.nn.Module):
         
         return self.outconv(up4)
 
+
 class Fourier2d(torch.nn.Module):
     def __init__(self, image_size):
         super(Fourier2d, self).__init__()
@@ -302,6 +305,7 @@ class UNetFourier(torch.nn.Module):
         
         return self.outconv(up2)
 
+
 class UNet_crf(torch.nn.Module):
 
     def __init__(self, n_channels, n_classes):
@@ -318,7 +322,6 @@ class UNet_crf(torch.nn.Module):
         self.outconv = out_conv(32, n_classes)
 
         self.crf = CRF(n_spatial_dims=3)
-
 
     def forward(self, x):
 
@@ -340,3 +343,30 @@ class UNet_crf(torch.nn.Module):
         out = out.squeeze(4) # [bs, 2, h, w]
 
         return out
+
+
+class UNetCLSTM(torch.nn.Module):
+    def __init__(self, n_channels, n_classes):
+        super(UNetCLSTM, self).__init__()
+        
+        self.down1 = double_conv(n_channels, 32, 32)
+        self.clstm1 = ConvLSTM(input_channels=32, hidden_channels=[64, 32, 32, 16, 32], kernel_size=3, step=5, effective_step=[4]).cuda()
+        self.down2 = down_step(32, 64)
+        self.clstm2 = ConvLSTM(input_channels=64, hidden_channels=[64, 32, 32, 32, 64], kernel_size=3, step=5, effective_step=[4]).cuda()
+
+        self.outconv = out_conv(32, n_classes)
+
+    def forward(self, x):
+        down1 = self.down1(x)
+        outputs1, _ = self.clstm1(down1)
+
+        down2 = self.down2(down1)
+        outputs2, _ = self.clstm2(down2)
+
+        bottom = self.bottom_bridge(down2)
+
+        up1 = self.up1(bottom, outputs2[0])
+        up2 = self.up2(up1, outputs1[0])
+
+        return self.outconv(up2)
+

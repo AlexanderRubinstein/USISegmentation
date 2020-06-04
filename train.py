@@ -132,7 +132,7 @@ def train(model,
           new_checkpoint_path=None):
 
     best_val_loss = float('+inf')
-    start_epoch = 0
+    start_epoch = -1
     if checkpoint is not None:
         model.load_state_dict(checkpoint['model_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
