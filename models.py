@@ -353,6 +353,11 @@ class UNetCLSTM(torch.nn.Module):
         self.down2 = down_step(32, 64)
         self.clstm2 = ConvLSTM(input_channels=64, hidden_channels=[64, 32, 32, 32, 64], kernel_size=3, step=5, effective_step=[4]).cuda()
 
+        self.bottom_bridge = down_step(64, 128)
+
+        self.up1 = up_step(128, 64)
+        self.up2 = up_step(64, 32)
+
         self.outconv = out_conv(32, n_classes)
 
     def forward(self, x):
