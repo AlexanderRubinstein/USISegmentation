@@ -31,14 +31,15 @@ class Segmentation(object):
         frames[0].save(path_to_save, save_all=True, append_images=frames[1:], dpi=(600, 600), optimize=False, duration=100, loop=0)
     
     def horizontal_concatenation(self, image1, image2):
-        concat_image = Image.new('L', (image1.width + image2.width, image1.height))
+        concat_image = Image.new('RGB', (image1.width + image2.width, image1.height))
         concat_image.paste(image1, (0, 0))
         concat_image.paste(image2, (image1.width, 0))
         
         return concat_image
     
-    def save_gif_file(self, images, masks, path_to_save):
-        concat_images = [self.horizontal_concatenation(image, mask) for image, mask in zip(images, masks)]
+    def save_gif_file(self, images, masks, predicted_masks, path_to_save):
+        concat_images = [self.horizontal_concatenation(self.horizontal_concatenation(image, mask), predicted_mask) 
+                         for image, mask, predicted_mask in zip(images, masks, predicted_masks)]
         concat_images[0].save(path_to_save, save_all=True, append_images=concat_images[1:])
     
     def segmentation(self, images):
@@ -72,7 +73,7 @@ def main(argv):
 
     dataset = []
     for patient_path in patients_paths:
-        patient = Patient(patient_path, inference=True)
+        patient = Patient(patient_path, inference=False)
         patient_name = patient.get_patient_name()
 
         print('{} data reading ...'.format(patient_name)) 
@@ -84,22 +85,24 @@ def main(argv):
         print('{} data segmentation ...'.format(patient_name))
         for image_id in tqdm(patient_data.keys()):
             images = [Image.fromarray(patient_data[image_id]['image'][i]).convert("L")
-                      for i in range(patient_data[image_id]['image'].shape[0] - 1)]
-            frames = segmentator.segmentation(images)
+                      for i in range(patient_data[image_id]['image'].shape[0])]
+            masks = [Image.fromarray(patient_data[image_id]['mask'][i]).convert("RGB")
+                      for i in range(patient_data[image_id]['mask'].shape[0])]
+            predicted_masks = segmentator.segmentation(images)
 
-            path_to_save = os.path.join(test_data_path, patient_name, 'Masks')
+            path_to_save = os.path.join(test_data_path, patient_name, 'Predicted_Masks')
             try:
                 os.makedirs(path_to_save, exist_ok=True)
             except OSError: 
                 pass
-            segmentator.save_tif_file(frames, os.path.join(path_to_save, '{}.tif'.format(image_id)))
+            segmentator.save_tif_file(predicted_masks, os.path.join(path_to_save, '{}.tif'.format(image_id)))
 
             path_to_save = os.path.join(test_data_path, patient_name, 'Animations')
             try:
                 os.makedirs(path_to_save, exist_ok=True)
             except OSError: 
                 pass
-            segmentator.save_gif_file(images, frames, os.path.join(path_to_save, '{}.gif'.format(image_id)))
+            segmentator.save_gif_file(images, masks, predicted_masks, os.path.join(path_to_save, '{}.gif'.format(image_id)))
         print()
 
 if __name__ == "__main__":
