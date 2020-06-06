@@ -43,7 +43,7 @@ by experts) from National Center for Endocrinology.
 What makes this project interesting for us is to account for
 space information from neighbor (nearest) slices of space. Convolutional neural
 networks have shown themselves very well in various tasks of computer vision.
-So we have compiled an algorithm that uses the symbiosis of both approaches.
+So we have compiled an algorithm that uses the symbiosis of both ideas.
 
 ## Usage
 
@@ -58,7 +58,7 @@ The list of required libraries (can be installed by for example `pip install <pa
 - `pytorch` (tested on 1.3.1)
 - `tensorboard` (tested on 2.1.1)
 - `torchvision` (tested on 0.4.2)
-- `opencv` (tested on opencv-python-headless)
+- `opencv` (tested on opencv-python-headless 4.2.0.32)
 
 
 ### Prepare data
