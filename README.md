@@ -204,6 +204,8 @@ test
 
 ![Inference example gif](supplementary_files/I0000028.gif)
 
+<p style="text-align: center;">(US image, ground truth, prediction)</p>
+
 - some predicted masks and ground truth masks for the same model:
 
 ![Inference example png 1](supplementary_files/inference1.PNG)
