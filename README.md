@@ -52,13 +52,13 @@ So we have compiled an algorithm that uses the symbiosis of both approaches.
 The list of required libraries (can be installed by for example `pip install <package name>` or `conda install <package name>`):  
 
 - `crfseg` - [Developed by team “2.5D Neural Networks for Medical Image Segmentation” in similar task](https://pypi.org/project/crfseg/)
-- `numpy>=1.18.1`
-- `pandas>=0.25.1`
-- `pillow>=6.1.0`
-- `pytorch>=1.3.1`
-- `tensorboard>=2.1.1`
-- `torchvision>=0.4.2`
-- `opencv-python-headless`
+- `numpy` (tested on 1.18.1)
+- `pandas` (tested on 0.25.1)
+- `pillow` (tested on 6.1.01)
+- `pytorch` (tested on 1.3.1)
+- `tensorboard` (tested on 2.1.1)
+- `torchvision` (tested on 0.4.2)
+- `opencv` (tested on opencv-python-headless)
 
 
 ### Prepare data
