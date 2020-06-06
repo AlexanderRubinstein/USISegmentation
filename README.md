@@ -3,8 +3,8 @@
 ## Introduction
 
 With ultrasound, a number of soft-tissues (parenchymal), for example, thyroid
-formations can be completely visualized, the state of which has important di-
-agnostic value. In thyroid the pathology can be diffused (affecting the entire
+formations can be completely visualized, the state of which has important diagnostic value.
+In thyroid the pathology can be diffused (affecting the entire
 organ/structure), focal or mixed.
 With the development of computer vision technologies, research has become
 possible at the junction of the areas of deep learning and biomedicine to solve
@@ -25,9 +25,10 @@ Ultrasound is a form of radiation that, like X-rays, is useful for medical imagi
 because of a good balance between its penetration of and interaction with the
 body [[3]](#references). But the exact physical model of wave propagation through the insides
 of a person is still unknown.
-The main idea we are planning to implement is to utilize UNet-like model com-
-bined with Recurrent Neural Networks (RNN) [[4]](#references) in order to account for infor-
-mation from neighbor slices. There are various approaches to the construction
+The main idea we are planning to implement is to utilize UNet-like model 
+combined with Recurrent Neural Networks (RNN) [[4]](#references) in order 
+to account for information from neighbor slices. 
+There are various approaches to the construction
 of such models [[5, 6]](#references).
 
 ## Data
