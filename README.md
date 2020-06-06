@@ -96,6 +96,8 @@ raw data: <raw data> # path to folder relative to the root with raw data
 preprocessed data: <data> # path to the folder relative to the root where preprocessed data will be
 ```
 
+As a result, you will receive a `<data>` folder with prepared images with the same structure as the `<raw data>` folder, as well as a csv table `dataset.csv` with a description of the dataset.
+
 ### Train network
 
 - To train the network after preparing your data run this command:  
