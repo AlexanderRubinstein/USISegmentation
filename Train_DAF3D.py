@@ -186,9 +186,11 @@ def run_epoch(model, iterator, optimizer, metric, weighted_metric=None, phase='t
                 predict = model(images)
                 predicted_masks = F.sigmoid(predict).cpu().numpy()
 
-                predicted_masks_0 = predicted_masks <= 0.5
-                predicted_masks_1 = predicted_masks > 0.5
-                predicted_masks = np.concatenate([predicted_masks_0, predicted_masks_1], axis=1).astype(np.int)
+                # predicted_masks_0 = predicted_masks <= 0.5
+                # predicted_masks_1 = predicted_masks > 0.5
+                predicted_masks_0 = 1 - predicted_masks
+                predicted_masks_1 = predicted_masks
+                predicted_masks = np.concatenate([predicted_masks_0, predicted_masks_1], axis=1)
 
                 criterion = CombinedLoss([CrossEntropyLoss(), GeneralizedDiceLoss(weighted=True)], [0.4, 0.6])
                 # print(predicted_masks.shape)

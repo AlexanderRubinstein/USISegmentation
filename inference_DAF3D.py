@@ -10,6 +10,9 @@ from configs.parsing import cmd_args_parsing, args_parsing
 from models import UNet
 from patient_data import Patient
 
+from torch.nn import functional as F
+import numpy as np
+
 from DAF3D import DAF3D
 
 
@@ -56,7 +59,14 @@ class Segmentation(object):
         masks = []
         with torch.no_grad():
             for image in images:
-                predicted_mask = self.model(init_transform(image).unsqueeze(0).to(self.device))
+                predict = self.model(init_transform(image).unsqueeze(0).to(self.device))
+                predicted_mask = F.sigmoid(predict).cpu().numpy()
+
+                predicted_mask_0 = 1 - predicted_mask
+                predicted_mask_1 = predicted_mask
+                predicted_mask = np.concatenate([predicted_mask_0, predicted_mask_1], axis=1)
+                # predicted_mask = self.model(init_transform(image).unsqueeze(0).to(self.device))
+                predicted_mask = torch.tensor(predicted_mask).to(device)
                 mask = self.predicted_classes(predicted_mask)
                 masks.append(mask.squeeze(0).cpu())
         
@@ -66,8 +76,8 @@ def main(argv):
     params = args_parsing(cmd_args_parsing(argv))
     model_path, image_size, test_data_path = params['model_path'], params['image_size'], params['test_data_path']
     
-    segmentator = Segmentation(UNet(1, 2), model_path, image_size, device)
-    # segmentator = Segmentation(DAF3D(), model_path, image_size, device)
+    # segmentator = Segmentation(UNet(1, 2), model_path, image_size, device)
+    segmentator = Segmentation(DAF3D(), model_path, image_size, device)
     
     patients_paths = [os.path.join(test_data_path, patient_name) for patient_name in os.listdir(test_data_path)]
 
