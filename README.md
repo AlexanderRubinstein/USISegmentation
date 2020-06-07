@@ -143,7 +143,7 @@ To train it, you should change file `train.py` to `Train_DAF3D.py` in the comman
 	- `fourier_layer` - type of transform in frequency space (`linear` or `non-linear`);
 
 ##### in file `DAF3D.py`
-7. ```DAF3D()``` - model with [Deep Attentive Features](https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=8698868). Uses [ResNeXt](https://arxiv.org/pdf/1611.05431.pdf) as backbone and [FPN](https://arxiv.org/pdf/1612.03144.pdf) to combine multi-level features utilizing 3D atrous spatial pyramid pooling (ASPP) on top.
+7. ```DAF3D()``` - model with [Deep Attentive Features](https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=8698868) [[8]](#references). Uses [ResNeXt](https://arxiv.org/pdf/1611.05431.pdf) [[9]](#references) as backbone and [FPN](https://arxiv.org/pdf/1612.03144.pdf) [[10]](#references) to combine multi-level features utilizing 3D atrous spatial pyramid pooling (ASPP) on top.
 
 ### Perform inference
 
@@ -262,3 +262,7 @@ based on U-Net (R2U-Net) for Medical Image Segmentation.
 [7] Sudre, Carole & Li, Wenqi & Vercauteren, Tom & Ourselin, S´ebastien &
 Cardoso, Manuel Jorge. (2017). Generalised Dice overlap as a deep learning
 loss function for highly unbalanced segmentations.  
+[8] Wang Y, Dou H, Hu X, et al. (2019) Deep Attentive Features for Prostate Segmentation
+ in 3D Transrectal Ultrasound.
+[9] Xie, Saining et al. (2017) Aggregated Residual Transformations for Deep Neural Networks.  
+[10] Lin, Tsung-Yi et al. (2017) Feature Pyramid Networks for Object Detection.
