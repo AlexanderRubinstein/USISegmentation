@@ -7,7 +7,7 @@ import torch
 import torchvision
 
 from configs.parsing import cmd_args_parsing, args_parsing
-from models import UNet
+from models import UNet, UNetCLSTMed
 from patient_data import Patient
 
 from DAF3D import DAF3D
@@ -56,7 +56,14 @@ class Segmentation(object):
         masks = []
         with torch.no_grad():
             for image in images:
-                predicted_mask = self.model(init_transform(image).unsqueeze(0).to(self.device))
+                if self.model.__class__.__name__ == "UNetCLSTMed":
+                    input_tensor = init_transform(image).unsqueeze(0).to(self.device)
+                    print(input_tensor.shape)
+                    input_tensor = input_tensor.repeat(4, 1, 1, 1)
+                    print(input_tensor.shape)
+                    predicted_mask = self.model(input_tensor)
+                else: 
+                    predicted_mask = self.model(init_transform(image).unsqueeze(0).to(self.device))
                 mask = self.predicted_classes(predicted_mask)
                 masks.append(mask.squeeze(0).cpu())
         
@@ -66,7 +73,7 @@ def main(argv):
     params = args_parsing(cmd_args_parsing(argv))
     model_path, image_size, test_data_path = params['model_path'], params['image_size'], params['test_data_path']
     
-    segmentator = Segmentation(UNet(1, 2), model_path, image_size, device)
+    segmentator = Segmentation(UNetCLSTMed(1,2), model_path, image_size, device)
     # segmentator = Segmentation(DAF3D(), model_path, image_size, device)
     
     patients_paths = [os.path.join(test_data_path, patient_name) for patient_name in os.listdir(test_data_path)]
