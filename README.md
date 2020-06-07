@@ -257,5 +257,5 @@ Cardoso, Manuel Jorge. (2017). Generalised Dice overlap as a deep learning
 loss function for highly unbalanced segmentations.  
 [7] Wang Y, Dou H, Hu X, et al. (2019) Deep Attentive Features for Prostate Segmentation
  in 3D Transrectal Ultrasound.  
-[8] Xie, Saining et al. (2017) Aggregated Residual Transformations for Deep Neural Networks.
+[8] Xie, Saining et al. (2017) Aggregated Residual Transformations for Deep Neural Networks.  
 [9] Lin, Tsung-Yi et al. (2017) Feature Pyramid Networks for Object Detection.
