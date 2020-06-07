@@ -130,13 +130,13 @@ To train it, you should change file `train.py` to `Train_DAF3D.py` in the comman
 3. ```UNetTC<i>(n_channels, n_classes)``` - UNet with history concatenation in skip connections (TC stands for Triple Cat; `<i>` means number of down steps, available options are: "" for 2 down steps as in vanilla, "3" and "4" for 3 and 4 down steps correspondingly); 
 4. ```UNetFourier(n_channels, n_classes, image_size, fourier_layer)``` - UNet with Fourier layers in skip connections;
 5. ```UNet_crf(n_channels, n_classes)``` - UNet with [conditional random fields based layer](https://pypi.org/project/crfseg/) on top;
-6. ```UNetCLSTMed()``` - UNet with convolutional LSTM cells in skip connections;
+6. ```UNetCLSTMed()``` - UNet with convolutional LSTM cells in skip connections.
 
 - Where:
 	- `n_channels` states for number of color channels in the input image; 
 	- `n_classes` - number of classes for output pixels (2 for binary segmentation);
 	- `height, width`/`image_size` - spatial dimensions of the input image;
-	- `fourier_layer` - type of transform in frequency space (`linear` or `non-linear`);
+	- `fourier_layer` - type of transform in frequency space (`linear` or `non-linear`).
 
 ##### in file `DAF3D.py`
 7. ```DAF3D()``` - model with [Deep Attentive Features](https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=8698868) [[7]](#references). Uses [ResNeXt](https://arxiv.org/pdf/1611.05431.pdf) [[8]](#references) as backbone and [FPN](https://arxiv.org/pdf/1612.03144.pdf) [[9]](#references) to combine multi-level features utilizing 3D atrous spatial pyramid pooling (ASPP) on top.
