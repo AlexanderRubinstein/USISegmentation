@@ -31,3 +31,6 @@ train_local*.py
 
 # python stuff
 .idea/
+
+# test for inference
+test/
