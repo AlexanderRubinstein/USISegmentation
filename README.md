@@ -119,7 +119,11 @@ checkpoint_path: checkpoints/<checkpoint name> # checkpoint path if continue tra
 ---
 **NOTE**
 
-In file `train.py` you can change models (do not forget to import them if they are not imported already).
+1. In file `train.py` you can change models (do not forget to import them if they are not imported already).
+
+2. We compared our models with the state of the art architecture from [Deep Attentive Features for Prostate
+Segmentation in 3D Transrectal Ultrasound](https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=8698868) paper. Since our data is not really 3d data we considered batch dimension of our original tensors as the third dimension of 3d images. 
+To train it, you should change file `train.py` to `Train_DAF3D.py` in the command above.
 
 ---
 
