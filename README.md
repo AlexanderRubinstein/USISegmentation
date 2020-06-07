@@ -21,15 +21,7 @@ save individual images (ultrasound slices).
 
 ## Purpose
 
-Ultrasound is a form of radiation that, like X-rays, is useful for medical imaging
-because of a good balance between its penetration of and interaction with the
-body [[3]](#references). But the exact physical model of wave propagation through the insides
-of a person is still unknown.
-The main idea we are planning to implement is to utilize UNet-like model 
-combined with Recurrent Neural Networks (RNN) [[4]](#references) in order 
-to account for information from neighbor slices. 
-There are various approaches to the construction
-of such models [[5, 6]](#references).
+Ultrasound is a form of radiation that, like X-rays, is useful for medical imaging because of a good balance between its penetration of and interaction with the body [[3]](#references). But the exact physical model of wave propagation through the insides of a person is still unknown. First of all we investigate different UNet-like models to solve thyroid ultrasound images segmentation problem. There are various approaches to the construction of such models [[4, 5]](#references). Our main goal is to take into account the relationship between neighboring ultrasound slices, so we proposed several methods aimed at this. We also compared our results with basic and state-of-the-art methods and suggest related idea for learnable data processing layers.
 
 ## Data
 
@@ -44,6 +36,10 @@ What makes this project interesting for us is to account for
 space information from neighbor (nearest) slices of space. Convolutional neural
 networks have shown themselves very well in various tasks of computer vision.
 So we have compiled an algorithm that uses the symbiosis of both ideas.
+
+## Evaluation
+
+To evaluate the quality of segmentation, we used the Dice coefficient, which is often used in biomedicine, and the weighted Dice coefficient, based on the Generalized Dice Loss (GDL) [[6]](#references). It can be seen that a weighted metric gives a more trustworthy result, since it takes into account the occupied area of the white spot (formation), relative to the black (background).
 
 ## Usage
 
@@ -143,7 +139,7 @@ To train it, you should change file `train.py` to `Train_DAF3D.py` in the comman
 	- `fourier_layer` - type of transform in frequency space (`linear` or `non-linear`);
 
 ##### in file `DAF3D.py`
-7. ```DAF3D()``` - model with [Deep Attentive Features](https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=8698868) [[8]](#references). Uses [ResNeXt](https://arxiv.org/pdf/1611.05431.pdf) [[9]](#references) as backbone and [FPN](https://arxiv.org/pdf/1612.03144.pdf) [[10]](#references) to combine multi-level features utilizing 3D atrous spatial pyramid pooling (ASPP) on top.
+7. ```DAF3D()``` - model with [Deep Attentive Features](https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=8698868) [[7]](#references). Uses [ResNeXt](https://arxiv.org/pdf/1611.05431.pdf) [[8]](#references) as backbone and [FPN](https://arxiv.org/pdf/1612.03144.pdf) [[9]](#references) to combine multi-level features utilizing 3D atrous spatial pyramid pooling (ASPP) on top.
 
 ### Perform inference
 
@@ -250,19 +246,16 @@ nodule recognition and diagnosis in ultrasound imaging with the YOLOv2
 neural network. World Journal of Surgical Oncology. 17. 10.1186/s12957-
 019-1558-z.  
 [3] M. A. Flower. Webb’s Physics of Medical Imaging, Second Edition.  
-[4] Le, Truc & Bui, Giang & Duan, Ye. (2017). A Multi-view Recurrent
-Neural Network for 3D Mesh Segmentation. Computers & Graphics. 66.
-10.1016/j.cag.2017.05.011.  
-[5] Azad, Reza & Asadi, Maryam & Fathy, Mahmood & Escalera, Sergio.
+[4] Azad, Reza & Asadi, Maryam & Fathy, Mahmood & Escalera, Sergio.
 (2019). Bi-Directional ConvLSTM U-Net with Densley Connected Convolu-
 tions.  
-[6] Alom, Md. Zahangir & Hasan, Mahmudul & Yakopcic, Chris & Taha, Tarek
+[5] Alom, Md. Zahangir & Hasan, Mahmudul & Yakopcic, Chris & Taha, Tarek
 & Asari, Vijayan. (2018). Recurrent Residual Convolutional Neural Network
 based on U-Net (R2U-Net) for Medical Image Segmentation.  
-[7] Sudre, Carole & Li, Wenqi & Vercauteren, Tom & Ourselin, S´ebastien &
+[6] Sudre, Carole & Li, Wenqi & Vercauteren, Tom & Ourselin, S´ebastien &
 Cardoso, Manuel Jorge. (2017). Generalised Dice overlap as a deep learning
 loss function for highly unbalanced segmentations.  
-[8] Wang Y, Dou H, Hu X, et al. (2019) Deep Attentive Features for Prostate Segmentation
+[7] Wang Y, Dou H, Hu X, et al. (2019) Deep Attentive Features for Prostate Segmentation
  in 3D Transrectal Ultrasound.
-[9] Xie, Saining et al. (2017) Aggregated Residual Transformations for Deep Neural Networks.  
-[10] Lin, Tsung-Yi et al. (2017) Feature Pyramid Networks for Object Detection.
+[8] Xie, Saining et al. (2017) Aggregated Residual Transformations for Deep Neural Networks.  
+[9] Lin, Tsung-Yi et al. (2017) Feature Pyramid Networks for Object Detection.
