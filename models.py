@@ -89,6 +89,62 @@ class UNet(torch.nn.Module):
         
         return self.outconv(up2)
 
+class attention_right(torch.nn.Module):
+    def __init__(self, shape):
+        super(attention_right, self).__init__()
+        self.num_channels = shape[0]
+        self.height, self.width = shape[1], shape[2]
+        self.W_1 = torch.randn(1, self.num_channels, self.num_channels).to('cuda')
+        self.relu1 = torch.nn.ReLU()
+
+        self.W_2 = torch.randn(1, self.num_channels, self.num_channels).to('cuda')
+        self.relu2 = torch.nn.ReLU()
+
+        self.sigm = torch.nn.Sigmoid()
+
+    def forward(self, x1, x2):
+        # x1 is from encoder
+        # x2 is from the bottom
+        bs = x1.shape[0]
+        x1 = x1.reshape(bs, self.num_channels, -1)
+        x2 = x2.reshape(bs, self.num_channels, -1)
+        out1 = self.relu1(torch.bmm(self.W_1.expand(bs, -1, -1), x1))
+        out2 = self.relu2(torch.bmm(self.W_2.expand(bs, -1, -1), x2))
+
+        attention = self.sigm(out1 + out2)
+        return (attention * x2).reshape(bs, self.num_channels, self.height, self.width)
+
+
+class Unet_with_attention_right(torch.nn.Module):
+    def __init__(self, n_channels, n_classes, height, width):
+        super(Unet_with_attention_right, self).__init__()
+
+        self.down1 = double_conv(n_channels, 32, 32)
+        self.att1 = attention_right((32, height, width))
+
+        self.down2 = down_step(32, 64)
+        self.att2 = attention_right((64, height//2, width//2))
+
+        self.bottom_bridge = down_step(64, 128)
+
+        self.up1 = up_step(128, 64)
+        self.up2 = up_step(64, 32)
+
+        self.outconv = out_conv(32, n_classes)
+
+    def forward(self, x):
+        #         x = Fourier2d(x.shape[1:])(x)
+        down1 = self.down1(x)
+        down2 = self.down2(down1)
+
+        bottom = self.bottom_bridge(down2)
+
+        up1 = self.att2(self.up1(bottom, down2), down2)
+        up2 = self.att1(self.up2(up1, down1), down1)
+
+        return self.outconv(up2)
+
+
 class attention(torch.nn.Module):
     def __init__(self, shape):
         super(attention, self).__init__()
