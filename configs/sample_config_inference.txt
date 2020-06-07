@@ -1,0 +1,4 @@
+root: /content/drive/My Drive/SK/DL/project/USISegmentation # root
+model path: best_models/3rd stage/DAF3D.best.pth # path to the model relative to the root
+image size: 256, 256 # model image input size (height, width)
+test data: test # path to folder relative to the root with test data
