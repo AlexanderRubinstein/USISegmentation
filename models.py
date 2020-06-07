@@ -451,5 +451,4 @@ class UNetCLSTMed(torch.nn.Module):
 
         up1 = self.up1(bottom, outputs2[0].transpose(1,0))
         up2 = self.up2(up1, outputs1[0].transpose(1,0))
-
         return self.outconv(up2)
