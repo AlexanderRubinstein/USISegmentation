@@ -58,10 +58,8 @@ class Segmentation(object):
             for image in images:
                 if self.model.__class__.__name__ == "UNetCLSTMed":
                     input_tensor = init_transform(image).unsqueeze(0).to(self.device)
-                    print(input_tensor.shape)
                     input_tensor = input_tensor.repeat(4, 1, 1, 1)
-                    print(input_tensor.shape)
-                    predicted_mask = self.model(input_tensor)
+                    predicted_mask = self.model(input_tensor)[0]
                 else: 
                     predicted_mask = self.model(init_transform(image).unsqueeze(0).to(self.device))
                 mask = self.predicted_classes(predicted_mask)
